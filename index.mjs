@@ -8,12 +8,18 @@ export default class Search extends Componentry.Module {
     this.connector = connector;
     this.db = this.connector.db;
     this.manifest = {};
-    // search collection can be renamed by host
-    this.collection = "_search";
+    this.setCollection('_search');
+  }
+
+  /**
+   * Searchable collection can be configured by the host
+   * @param name
+   */
+  setCollection(name) {
+    this.searchable = this.connector.db.collection(name);
   }
   async register(manifest = []) {
-    this.searchable = this.connector.db.collection(this.collection);
-    this.manifest = manifest;
+    this.manifest = (Array.isArray(manifest))?manifest:[manifest];
   }
   async load() {
     await this.collection.remove({});
@@ -28,6 +34,11 @@ export default class Search extends Componentry.Module {
           name:field
         }))
       }
+    }
+  }
+  async query(text) {
+    for (let entry of this.manifest) {
+
     }
   }
 }
