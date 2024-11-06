@@ -7,7 +7,6 @@ export default class Search extends Componentry.Module {
   constructor(connector,options) {
     super(connector,import.meta.url);
     this.connector = connector;
-    this.db = this.connector.db;
     this.manifest = {};
     this.setCollection('_search');
   }
@@ -29,20 +28,28 @@ export default class Search extends Componentry.Module {
    * in the manifest. Listeners will be set on each collection for real
    * time updates. Invoke load() regularly to ensure searchable data is
    * current.
+   *
+   * Load() uses Firemacro to merge the search and render templates with
+   * collection data
    */
   async load() {
     //TODO: change to update rather than erase for continuity and efficiency
     await this.collection.remove({});
     let result = [];
-    for (let source of this.sources) {
+    for (let entry of this.manifest) {
       let record = {
         _id:Componentry.IdForge.datedId(),
-        collection:source.collection
+        collection:entry.collection
       }
-      for (let field of source.fields) {
-        result.push(Object.assign({},record,{
-          name:field
-        }))
+      let data = await this.connector.db.collection(entry.collection).find().toArray();
+      for (const doc of data) {
+        let fm = new FireMacro(doc);
+        let parsed = await fm.parse(data);
+        for (let field of parsed.values) {
+          result.push(Object.assign({},record,{
+            name:field
+          }))
+        }
       }
     }
   }
