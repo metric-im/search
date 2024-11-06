@@ -4,7 +4,7 @@ Provide natural language search across all identified collections. Search collec
 values from a given set of collections and fields, renders results and navigates to
 the matching object
 
-## Usage
+## Configuration
 ```shell
 npm install @metric-im/search
 ```
@@ -21,11 +21,19 @@ document.append(html);
 ```
 The manifest passed to register() expects an array of objects denoting collections,
 fields and options to be searched. Results include sorted objects that match the query.
+### Database
+Mongo language searches require a text index and text search
+```shell
+db.searchable.createIndex({text:"text"})
+db.searchable.find({$text:{$search:"pasta"}})
+```
+You can change the collection name with `search.setCollection(name)`.
 
-## Reference
+## Usage
 
 ```javascript
-    {collection: 'users',fields:['username','firstName','lastName','bio'],
-        render: '<h2>{username} ({firstName} {lastName})</h2><p>{bio}</p>',
-        target: '/users/{_id}'},
+{collection: 'users',where:{username:{$ne:null}},
+    search:['{username}','{firstName} {lastName}','{bio}'],
+    render: '<h2>{username} ({firstName} {lastName})</h2><p>{bio}</p>',
+    target: '/users/{_id}'},
 ```
