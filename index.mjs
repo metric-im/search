@@ -1,7 +1,7 @@
 import express from 'express';
 import path from "path";
 import Componentry from '@metric-im/componentry';
-import FireMacro from '../wiki-mixin/components/FireMacro.mjs';
+import FireMacro from '../firemacro/index.mjs';
 
 export default class Search extends Componentry.Module {
   constructor(connector,options) {
@@ -18,9 +18,9 @@ export default class Search extends Componentry.Module {
   setCollection(name) {
     this.searchable = this.connector.db.collection(name);
   }
-  async register(manifest = []) {
+  register(manifest = []) {
     this.manifest = (Array.isArray(manifest))?manifest:[manifest];
-    await this.load();
+    setTimeout(()=>this.load(),1);
   }
 
   /**
@@ -38,7 +38,9 @@ export default class Search extends Componentry.Module {
       await this.searchable.deleteMany({collection:entry.collection});
       let data = await this.connector.db.collection(entry.collection).find(entry.where).toArray();
       let writes = [];
+      let i = 0;
       for (const doc of data) {
+        if (i++ > 200) break; //TODO: debug for quick results
         let fm = new FireMacro(entry);
         let populatedEntry = await fm.parse(doc);
         for (let searchValue of populatedEntry.search) {
@@ -48,7 +50,8 @@ export default class Search extends Componentry.Module {
             text:searchValue,
             render:populatedEntry.render,
             target:populatedEntry.target,
-            created:new Date()
+            created:doc.createdAt||doc.created,
+            modified:doc.updatedAt||doc.modified
           }});
         }
       }
@@ -57,9 +60,9 @@ export default class Search extends Componentry.Module {
     }
   }
   async query(text,element) {
-    let result = await this.searchable.find({$text:{$search:text}});
+    let result = await this.searchable.find({$text:{$search:text}}).toArray();
     if (element) {
-
+      element.append(result)
     } else {
       return result;
     }
