@@ -20,7 +20,6 @@ export default class Search extends Componentry.Module {
   }
   register(manifest = []) {
     this.manifest = (Array.isArray(manifest))?manifest:[manifest];
-    setTimeout(()=>this.load(),1);
   }
 
   /**
