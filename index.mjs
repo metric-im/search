@@ -1,7 +1,7 @@
 import express from 'express';
 import path from "path";
 import Componentry from '@metric-im/componentry';
-import FireMacro from '../firemacro/index.mjs';
+import FireMacro from '@metric-im/firemacro';
 
 export default class Search extends Componentry.Module {
   constructor(connector,options) {
