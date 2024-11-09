@@ -33,29 +33,36 @@ export default class Search extends Componentry.Module {
    */
   async load() {
     for (let entry of this.manifest) {
-      //TODO: change to update rather than erase for continuity and efficiency
-      await this.searchable.deleteMany({collection:entry.collection});
       let data = await this.connector.db.collection(entry.collection).find(entry.where).toArray();
       let writes = [];
-      let i = 0;
       for (const doc of data) {
-        if (i++ > 200) break; //TODO: debug for quick results
+        for (let attr of ['search','render','target']) {
+          if (typeof entry[attr] === 'function') entry[attr] = entry[attr](doc)
+        }
         let fm = new FireMacro(entry);
-        let populatedEntry = await fm.parse(doc);
+        let populatedEntry = await fm.parse({truncate:Search.truncate.bind(this)},doc);
+        let searchNumber = 0;
         for (let searchValue of populatedEntry.search) {
-          writes.push({insertOne:{
-            _id:Componentry.IdForge.datedId(),
-            collection:entry.collection,
-            text:searchValue,
-            render:populatedEntry.render,
-            target:populatedEntry.target,
-            created:doc.createdAt||doc.created,
-            modified:doc.updatedAt||doc.modified
+          writes.push({updateOne:{
+            filter:{_id:`${entry.collection}${searchNumber++}_${doc._id}`},
+            upsert:true,
+            update:{$set:{
+              collection:entry.collection,
+              text:searchValue,
+              render:populatedEntry.render,
+              target:populatedEntry.target,
+              _created:new Date(doc._created || doc.createdAt),
+              _modified:new Date(doc._modified || doc.updatedAt),
+              _captured:new Date()
+            }}
           }});
         }
+        if (writes.length >= 100) {
+          await this.searchable.bulkWrite(writes);
+          writes.length = 0;
+        }
       }
-      await this.searchable.bulkWrite(writes);
-      console.log('do bulk update')
+      if (writes.length > 0) await this.searchable.bulkWrite(writes);
     }
   }
   async query(text,element) {
@@ -65,5 +72,12 @@ export default class Search extends Componentry.Module {
     } else {
       return result;
     }
+  }
+  static truncate(str,size= 200) {
+    if (str && str.length>(size+50)) {
+      str = str.slice(0,size);
+      str = str.slice(0,str.lastIndexOf(' '))+'...'
+    }
+    return str;
   }
 }
