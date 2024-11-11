@@ -2,6 +2,7 @@ import express from 'express';
 import path from "path";
 import Componentry from '@metric-im/componentry';
 import FireMacro from '@metric-im/firemacro';
+import removeMarkdown from 'remove-markdown';
 
 export default class Search extends Componentry.Module {
   constructor(connector,options) {
@@ -79,5 +80,12 @@ export default class Search extends Componentry.Module {
       str = str.slice(0,str.lastIndexOf(' '))+'...'
     }
     return str;
+  }
+  static stripHtml(str) {
+    //TODO: weak, this can be done more thoroughly
+    return str.replace(/(<([^>]+)>)/gi, '')
+  }
+  static stripMarkdown(str) {
+    return removeMarkdown(str);
   }
 }
