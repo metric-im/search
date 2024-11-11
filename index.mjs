@@ -37,22 +37,22 @@ export default class Search extends Componentry.Module {
       let data = await this.connector.db.collection(entry.collection).find(entry.where).toArray();
       let writes = [];
       for (const doc of data) {
+        let record = Object.assign({},entry);
         for (let attr of ['search','render','target']) {
-          if (typeof entry[attr] === 'function') entry[attr] = entry[attr](doc)
+          if (typeof record[attr] === 'function') record[attr] = record[attr](doc)
+          else record[attr] = await new FireMacro(record[attr]).parse(doc);
         }
-        let fm = new FireMacro(entry);
-        let populatedEntry = await fm.parse({truncate:Search.truncate.bind(this)},doc);
         let searchNumber = 0;
-        for (let searchValue of populatedEntry.search) {
+        for (let searchValue of record.search) {
           if (!searchValue) continue;
           writes.push({updateOne:{
-            filter:{_id:`${entry.collection}${searchNumber++}_${doc._id}`},
+            filter:{_id:`${record.collection}${searchNumber++}_${doc._id}`},
             upsert:true,
             update:{$set:{
-              collection:entry.collection,
+              collection:record.collection,
               text:searchValue,
-              render:populatedEntry.render,
-              target:populatedEntry.target,
+              render:record.render,
+              target:record.target,
               _created:new Date(doc._created || doc.createdAt),
               _modified:new Date(doc._modified || doc.updatedAt),
               _captured:new Date()
@@ -75,18 +75,21 @@ export default class Search extends Componentry.Module {
       return result;
     }
   }
-  static truncate(str='',size= 200) {
+  static truncate(str,size= 200) {
+    if (!str) return ""; // catch null or undefined
     if (str && str.length>(size+50)) {
       str = str.slice(0,size);
       str = str.slice(0,str.lastIndexOf(' '))+'...'
     }
     return str;
   }
-  static stripHtml(str='') {
+  static stripHtml(str) {
+    if (!str) return ""; // catch null or undefined
     //TODO: weak, this can be done more thoroughly
     return str.replace(/(<([^>]+)>)/gi, '')
   }
-  static stripMarkdown(str='') {
+  static stripMarkdown(str) {
+    if (!str) return ""; // catch null or undefined
     return removeMarkdown(str);
   }
 }
