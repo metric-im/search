@@ -38,7 +38,9 @@ export default class Search extends Componentry.Module {
       let writes = [];
       for (const doc of data) {
         let record = Object.assign({},entry);
-        for (let attr of ['search','render','target']) {
+        // Sometimes _id can be an object. The manifest will define identifier if needed
+        if (!record.identifier) record.identifier = doc._id;
+        for (let attr of ['identifier','search','render','target']) {
           if (typeof record[attr] === 'function') record[attr] = record[attr](doc)
           else record[attr] = await new FireMacro(record[attr]).parse(doc);
         }
@@ -46,7 +48,7 @@ export default class Search extends Componentry.Module {
         for (let searchValue of record.search) {
           if (!searchValue) continue;
           writes.push({updateOne:{
-            filter:{_id:`${record.collection}${searchNumber++}_${doc._id}`},
+            filter:{_id:`${record.collection}${searchNumber++}_${record.identifier}`},
             upsert:true,
             update:{$set:{
               collection:record.collection,
