@@ -44,6 +44,7 @@ export default class Search extends Componentry.Module {
         let populatedEntry = await fm.parse({truncate:Search.truncate.bind(this)},doc);
         let searchNumber = 0;
         for (let searchValue of populatedEntry.search) {
+          if (!searchValue) continue;
           writes.push({updateOne:{
             filter:{_id:`${entry.collection}${searchNumber++}_${doc._id}`},
             upsert:true,
@@ -74,18 +75,18 @@ export default class Search extends Componentry.Module {
       return result;
     }
   }
-  static truncate(str,size= 200) {
+  static truncate(str='',size= 200) {
     if (str && str.length>(size+50)) {
       str = str.slice(0,size);
       str = str.slice(0,str.lastIndexOf(' '))+'...'
     }
     return str;
   }
-  static stripHtml(str) {
+  static stripHtml(str='') {
     //TODO: weak, this can be done more thoroughly
     return str.replace(/(<([^>]+)>)/gi, '')
   }
-  static stripMarkdown(str) {
+  static stripMarkdown(str='') {
     return removeMarkdown(str);
   }
 }
