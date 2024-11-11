@@ -67,13 +67,9 @@ export default class Search extends Componentry.Module {
       if (writes.length > 0) await this.searchable.bulkWrite(writes);
     }
   }
-  async query(text,element) {
-    let result = await this.searchable.find({$text:{$search:text}}).toArray();
-    if (element) {
-      element.append(result)
-    } else {
-      return result;
-    }
+  async query(text,max=50) {
+    let result = await this.searchable.find({$text:{$search:text}}).limit(max).toArray();
+    return result;
   }
   static truncate(str,size= 200) {
     if (!str) return ""; // catch null or undefined
