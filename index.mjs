@@ -74,20 +74,22 @@ export default class Search extends Componentry.Module {
       if (writes.length > 0) await this.searchable.bulkWrite(writes);
     }
   }
-  async query(text,max=50) {
+  async query(text,options={}) {
+    options.max = options.max || 50;
     let query = [];
     query.push({$match:{$text:{$search:text}}});
+    if (options.$match) query.push({$match:options.$match});
     query.push({$set:{score:{$meta:"textScore"}}});
     query.push({$unionWith:{coll:'searchable',pipeline:[
       {$match:{text:{$regex:text,$options:"i"}}},
       {$set:{score:text.length/5}},
       {$sort:{_modified:1}},
-      {$limit:max}
+      {$limit:options.max}
     ]}});
     query.push({$group:{_id:"$_id",score:{$max:"$score"},_modified:{$max:"$_modified"},doc:{$last:"$$ROOT"}}});
     query.push({$sort:{score:1,_modified:1}});
     query.push({$replaceRoot:{newRoot:"$doc"}});
-    query.push({$limit:max});
+    query.push({$limit:options.max});
     let result = await this.searchable.aggregate(query).toArray();
     for (let entry of result) {
       try {
